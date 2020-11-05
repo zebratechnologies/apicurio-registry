@@ -16,11 +16,14 @@
 
 package io.apicurio.registry.rules;
 
+import java.util.HashSet;
+import java.util.Optional;
+import java.util.Set;
+
+import io.apicurio.registry.rest.beans.RuleViolationCause;
 import io.apicurio.registry.types.RegistryException;
 import io.apicurio.registry.types.RuleType;
 import lombok.Getter;
-
-import java.util.Optional;
 
 /**
  * Exception thrown when a configured rule is violated, rejecting an artifact content
@@ -37,23 +40,50 @@ public class RuleViolationException extends RegistryException {
     @Getter
     private final Optional<String> ruleConfiguration;
 
-    /**
-     * Constructor.
-     * @param ruleConfiguration is optional, can be null
-     */
-    public RuleViolationException(String message, RuleType ruleType, String ruleConfiguration) {
-        super(message);
-        this.ruleType = ruleType;
-        this.ruleConfiguration = Optional.ofNullable(ruleConfiguration);
-    }
+    @Getter
+    private final Set<RuleViolationCause> causes;
 
     /**
      * Constructor.
-     * @param ruleConfiguration is optional, can be null
+     * @param message
+     * @param ruleType
+     * @param ruleConfiguration
+     * @param cause
      */
     public RuleViolationException(String message, RuleType ruleType, String ruleConfiguration, Throwable cause) {
         super(message, cause);
         this.ruleType = ruleType;
         this.ruleConfiguration = Optional.ofNullable(ruleConfiguration);
+        this.causes = new HashSet<>();
+    }
+
+    /**
+     * Constructor.
+     * @param message
+     * @param ruleType
+     * @param ruleConfiguration
+     * @param causes
+     */
+    public RuleViolationException(String message, RuleType ruleType, String ruleConfiguration, Set<RuleViolationCause> causes) {
+        super(message);
+        this.ruleType = ruleType;
+        this.ruleConfiguration = Optional.ofNullable(ruleConfiguration);
+        this.causes = causes;
+    }
+
+    /**
+     * Constructor.
+     * @param message
+     * @param ruleType
+     * @param ruleConfiguration
+     * @param causes
+     * @param cause
+     */
+    public RuleViolationException(String message, RuleType ruleType, String ruleConfiguration,
+            Set<RuleViolationCause> causes, Throwable cause) {
+        super(message, cause);
+        this.ruleType = ruleType;
+        this.ruleConfiguration = Optional.ofNullable(ruleConfiguration);
+        this.causes = causes;
     }
 }

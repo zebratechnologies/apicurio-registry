@@ -43,7 +43,15 @@ public class H2SqlStatements extends CommonSqlStatements {
      */
     @Override
     public boolean isPrimaryKeyViolation(Exception error) {
-        return error.getMessage().contains("primary key violation");
+        return error.getMessage() != null && error.getMessage().contains("primary key violation");
+    }
+    
+    /**
+     * @see io.apicurio.registry.storage.impl.sql.SqlStatements#isForeignKeyViolation(java.lang.Exception)
+     */
+    @Override
+    public boolean isForeignKeyViolation(Exception error) {
+        return error.getMessage() != null && error.getMessage().contains("Referential integrity constraint violation");
     }
 
     /**

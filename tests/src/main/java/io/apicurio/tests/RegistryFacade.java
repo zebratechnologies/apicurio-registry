@@ -100,8 +100,8 @@ public class RegistryFacade {
             case streams:
                 setupKafkaStorage(appEnv);
                 break;
-            case jpa:
-                setupJPAStorage(appEnv);
+            case sql:
+                setupSQLStorage(appEnv);
                 break;
         }
 
@@ -109,7 +109,7 @@ public class RegistryFacade {
 
     }
 
-    private void setupJPAStorage(Map<String, String> appEnv) throws Exception {
+    private void setupSQLStorage(Map<String, String> appEnv) throws Exception {
         PostgreSQLContainer database = new PostgreSQLContainer<>("postgres:10.12");
         database.start();
         TestUtils.waitFor("Database is running",
@@ -292,7 +292,9 @@ public class RegistryFacade {
                 }
             }
             if (logsPath != null) {
-                TestUtils.writeFile(logsPath.resolve(currentDate + "-" + p.getName() + "-" + "stdout.log"), p.getStdOut());
+                Path filePath = logsPath.resolve(currentDate + "-" + p.getName() + "-" + "stdout.log");
+                LOGGER.info("Storing registry logs to " + filePath.toString());
+                TestUtils.writeFile(filePath, p.getStdOut());
                 String stdErr = p.getStdErr();
                 if (stdErr != null && !stdErr.isEmpty()) {
                     TestUtils.writeFile(logsPath.resolve(currentDate + "-" + p.getName() + "-" + "stderr.log"), stdErr);

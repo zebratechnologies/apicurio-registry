@@ -16,15 +16,20 @@
 
 package io.apicurio.registry.rules.compatibility.jsonschema;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import io.apicurio.registry.rules.compatibility.jsonschema.diff.DiffContext;
-import io.apicurio.registry.rules.compatibility.jsonschema.diff.SchemaDiffVisitor;
+import static io.apicurio.registry.rules.compatibility.jsonschema.JsonUtil.MAPPER;
+import static io.apicurio.registry.rules.compatibility.jsonschema.wrapper.WrapUtil.wrap;
+
+import java.util.Set;
+
 import org.everit.json.schema.Schema;
 import org.everit.json.schema.loader.SchemaLoader;
 import org.json.JSONObject;
 
-import static io.apicurio.registry.rules.compatibility.jsonschema.JsonUtil.MAPPER;
-import static io.apicurio.registry.rules.compatibility.jsonschema.wrapper.WrapUtil.wrap;
+import com.fasterxml.jackson.core.JsonProcessingException;
+
+import io.apicurio.registry.rules.compatibility.jsonschema.diff.DiffContext;
+import io.apicurio.registry.rules.compatibility.jsonschema.diff.Difference;
+import io.apicurio.registry.rules.compatibility.jsonschema.diff.SchemaDiffVisitor;
 
 /**
  * @author Jakub Senko <jsenko@redhat.com>
@@ -45,12 +50,10 @@ public class JsonSchemaDiffLibrary {
             JSONObject updatedJson = MAPPER.readValue(updated, JSONObject.class);
 
             Schema originalSchema = SchemaLoader.builder()
-                .schemaJson(originalJson)
-                .build().load().build();
+                    .schemaJson(originalJson)
+                    .build().load().build();
 
-            Schema updatedSchema = SchemaLoader.builder()
-                .schemaJson(updatedJson)
-                .build().load().build();
+            Schema updatedSchema = SchemaLoader.builder().schemaJson(updatedJson).build().load().build();
 
             return findDifferences(originalSchema, updatedSchema);
 
@@ -67,5 +70,9 @@ public class JsonSchemaDiffLibrary {
 
     public static boolean isCompatible(String original, String updated) {
         return findDifferences(original, updated).foundAllDifferencesAreCompatible();
+    }
+
+    public static Set<Difference> getIncompatibleDifferences(String original, String updated) {
+        return findDifferences(original, updated).getIncompatibleDifferences();
     }
 }

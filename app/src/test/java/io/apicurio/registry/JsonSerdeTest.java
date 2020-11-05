@@ -19,22 +19,19 @@ package io.apicurio.registry;
 import static io.apicurio.registry.utils.tests.TestUtils.retry;
 
 import java.io.InputStream;
-import java.util.concurrent.CompletionStage;
-import java.util.function.Supplier;
-
+import java.util.Collections;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.junit.jupiter.api.Assertions;
 
-import io.apicurio.registry.client.RegistryService;
+import io.apicurio.registry.client.RegistryRestClient;
 import io.apicurio.registry.rest.beans.ArtifactMetaData;
 import io.apicurio.registry.support.Person;
 import io.apicurio.registry.types.ArtifactType;
-import io.apicurio.registry.utils.ConcurrentUtil;
 import io.apicurio.registry.utils.serde.JsonSchemaKafkaDeserializer;
 import io.apicurio.registry.utils.serde.JsonSchemaKafkaSerializer;
 import io.apicurio.registry.utils.serde.strategy.SimpleTopicIdStrategy;
-import io.apicurio.registry.utils.tests.RegistryServiceTest;
+import io.apicurio.registry.utils.tests.RegistryRestClientTest;
 import io.quarkus.test.junit.QuarkusTest;
 
 /**
@@ -43,31 +40,30 @@ import io.quarkus.test.junit.QuarkusTest;
 @QuarkusTest
 public class JsonSerdeTest extends AbstractResourceTestBase {
 
-    @RegistryServiceTest
-    public void testSchema(Supplier<RegistryService> supplier) throws Exception {
+    @RegistryRestClientTest
+    public void testSchema(RegistryRestClient restClient) throws Exception {
         InputStream jsonSchema = getClass().getResourceAsStream("/io/apicurio/registry/util/json-schema.json");
         Assertions.assertNotNull(jsonSchema);
 
         String artifactId = generateArtifactId();
 
-        CompletionStage<ArtifactMetaData> cs = supplier.get().createArtifact(ArtifactType.JSON, artifactId, null, jsonSchema);
-        ArtifactMetaData amd = ConcurrentUtil.result(cs);
+        ArtifactMetaData amd = restClient.createArtifact(artifactId, ArtifactType.JSON, jsonSchema);
 
         // make sure we have schema registered
-        supplier.get().reset();
-        retry(() -> supplier.get().getArtifactByGlobalId(amd.getGlobalId()));
+        retry(() -> restClient.getArtifactByGlobalId(amd.getGlobalId()));
 
         Person person = new Person("Ales", "Justin", 23);
 
-        try (JsonSchemaKafkaSerializer<Person> serializer = new JsonSchemaKafkaSerializer<>(supplier.get(), true);
-             JsonSchemaKafkaDeserializer<Person> deserializer = new JsonSchemaKafkaDeserializer<>(supplier.get(), true)) {
-            
+        try (JsonSchemaKafkaSerializer<Person> serializer = new JsonSchemaKafkaSerializer<>(restClient, true);
+             JsonSchemaKafkaDeserializer<Person> deserializer = new JsonSchemaKafkaDeserializer<>(restClient, true)) {
+
+            serializer.configure(Collections.emptyMap(), false);
             serializer.setArtifactIdStrategy(new SimpleTopicIdStrategy<>());
+
+            deserializer.configure(Collections.emptyMap(), false);
 
             Headers headers = new RecordHeaders();
             byte[] bytes = serializer.serialize(artifactId, headers, person);
-
-            ;
 
             person = deserializer.deserialize(artifactId, headers, bytes);
 
@@ -91,7 +87,7 @@ public class JsonSerdeTest extends AbstractResourceTestBase {
                 deserializer.deserialize(artifactId, headers, bytes);
                 Assertions.fail();
             } catch (Exception ignored) {
-            }            
+            }
         }
 
     }

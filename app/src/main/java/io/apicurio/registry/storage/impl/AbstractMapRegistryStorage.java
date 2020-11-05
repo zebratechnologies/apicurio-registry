@@ -209,7 +209,11 @@ public abstract class AbstractMapRegistryStorage extends AbstractRegistryStorage
         return (id, m) -> (m == null) ? new ConcurrentHashMap<>() : m;
     }
 
-    protected ArtifactMetaDataDto createOrUpdateArtifact(String artifactId, ArtifactType artifactType, ContentHandle content, boolean create, long globalId)
+    protected ArtifactMetaDataDto createOrUpdateArtifact(String artifactId, ArtifactType artifactType, ContentHandle contentHandle, boolean create, long globalId) {
+        return createOrUpdateArtifact(artifactId, artifactType, contentHandle, create, globalId, System.currentTimeMillis());
+    }
+
+    protected ArtifactMetaDataDto createOrUpdateArtifact(String artifactId, ArtifactType artifactType, ContentHandle content, boolean create, long globalId, long creationTime)
             throws ArtifactAlreadyExistsException, ArtifactNotFoundException, RegistryStorageException {
         if (artifactId == null) {
             if (!create) {
@@ -238,9 +242,9 @@ public abstract class AbstractMapRegistryStorage extends AbstractRegistryStorage
         contents.put(MetaDataKeys.GLOBAL_ID, String.valueOf(globalId));
         contents.put(MetaDataKeys.ARTIFACT_ID, artifactId);
 
-        String currentTimeMillis = String.valueOf(System.currentTimeMillis());
-        contents.put(MetaDataKeys.CREATED_ON, currentTimeMillis);
-        contents.put(MetaDataKeys.MODIFIED_ON, currentTimeMillis);
+        String creationTimeValue = String.valueOf(creationTime);
+        contents.put(MetaDataKeys.CREATED_ON, creationTimeValue);
+        contents.put(MetaDataKeys.MODIFIED_ON, creationTimeValue);
 
         contents.put(MetaDataKeys.TYPE, artifactType.value());
         ArtifactStateExt.applyState(contents, ArtifactState.ENABLED);
@@ -313,14 +317,10 @@ public abstract class AbstractMapRegistryStorage extends AbstractRegistryStorage
             version = Integer.parseInt(content.get(VERSION));
         }
         int fVersion = version;
-        if (state == ArtifactState.DELETED) {
-            deleteArtifactVersionInternal(artifactId, version);
-        } else {
-            if (content == null) {
-                content = getContentMap(artifactId, version.longValue(), null);
-            }
-            ArtifactStateExt.applyState(s -> storage.put(artifactId, fVersion, MetaDataKeys.STATE, s.name()), content, state);
+        if (content == null) {
+            content = getContentMap(artifactId, version.longValue(), null);
         }
+        ArtifactStateExt.applyState(s -> storage.put(artifactId, fVersion, MetaDataKeys.STATE, s.name()), content, state);
     }
 
     /**
@@ -470,25 +470,38 @@ public abstract class AbstractMapRegistryStorage extends AbstractRegistryStorage
 
         return artifactMetaDataDto;
     }
-
+    
+    /**
+     * @see io.apicurio.registry.storage.RegistryStorage#getArtifactVersionMetaData(java.lang.String, boolean, io.apicurio.registry.content.ContentHandle)
+     */
     @Override
-    public ArtifactMetaDataDto getArtifactMetaData(String artifactId, ContentHandle content) throws ArtifactNotFoundException, RegistryStorageException {
+    public ArtifactVersionMetaDataDto getArtifactVersionMetaData(String artifactId, boolean canonical,
+            ContentHandle content) throws ArtifactNotFoundException, RegistryStorageException {
         ArtifactMetaDataDto metaData = getArtifactMetaData(artifactId);
         ArtifactTypeUtilProvider provider = factory.getArtifactTypeProvider(metaData.getType());
         ContentCanonicalizer canonicalizer = provider.getContentCanonicalizer();
-        ContentHandle canonicalContent = canonicalizer.canonicalize(content);
-        byte[] canonicalBytes = canonicalContent.bytes();
+
+        byte[] contentToCompare;
+        if (canonical) {
+            ContentHandle canonicalContent = canonicalizer.canonicalize(content);
+            contentToCompare = canonicalContent.bytes();
+        } else {
+            contentToCompare = content.bytes();
+        }
+
         Map<Long, Map<String, String>> map = getVersion2ContentMap(artifactId);
         for (Map<String, String> cMap : map.values()) {
             ContentHandle candidateContent = ContentHandle.create(MetaDataKeys.getContent(cMap));
-            ContentHandle canonicalCandidateContent = canonicalizer.canonicalize(candidateContent);
-            byte[] candidateBytes = canonicalCandidateContent.bytes();
-            if (Arrays.equals(canonicalBytes, candidateBytes)) {
+            byte[] candidateBytes;
+            if (canonical) {
+                ContentHandle canonicalCandidateContent = canonicalizer.canonicalize(candidateContent);
+                candidateBytes = canonicalCandidateContent.bytes();
+            } else {
+                candidateBytes = candidateContent.bytes();
+            }
+            if (Arrays.equals(contentToCompare, candidateBytes)) {
                 ArtifactStateExt.logIfDeprecated(artifactId, ArtifactStateExt.getState(cMap), cMap.get(VERSION));
-                final ArtifactMetaDataDto artifactMetaDataDto = MetaDataKeys.toArtifactMetaData(cMap);
-                artifactMetaDataDto.setCreatedOn(metaData.getCreatedOn());
-                artifactMetaDataDto.setModifiedOn(metaData.getModifiedOn());
-                return artifactMetaDataDto;
+                return MetaDataKeys.toArtifactVersionMetaData(cMap);
             }
         }
         throw new ArtifactNotFoundException(artifactId);

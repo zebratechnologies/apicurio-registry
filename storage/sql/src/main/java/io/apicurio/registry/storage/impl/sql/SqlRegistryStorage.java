@@ -343,12 +343,7 @@ public class SqlRegistryStorage extends AbstractRegistryStorage {
         Date createdOn = new Date();
         try {
             return this.jdbi.withHandle( handle -> {
-                // Extract meta-data from the content
-                ArtifactTypeUtilProvider provider = factory.getArtifactTypeProvider(artifactType);
-                ContentExtractor extractor = provider.getContentExtractor();
-                EditableMetaData emd = extractor.extract(content);
-                EditableArtifactMetaDataDto metaData = new EditableArtifactMetaDataDto(emd.getName(), emd.getDescription(), emd.getLabels(), emd.getProperties());
-
+                EditableArtifactMetaDataDto metaData = extractMetaData(artifactType, content);
                 ArtifactMetaDataDto amdd = createArtifactInternal(handle, artifactId, artifactType, content,
                         createdBy, createdOn, metaData);
                 return CompletableFuture.completedFuture(amdd);
@@ -359,6 +354,19 @@ public class SqlRegistryStorage extends AbstractRegistryStorage {
             }
             throw new RegistryStorageException(e);
         }
+    }
+
+    private EditableArtifactMetaDataDto extractMetaData(ArtifactType artifactType, ContentHandle content) {
+        ArtifactTypeUtilProvider provider = factory.getArtifactTypeProvider(artifactType);
+        ContentExtractor extractor = provider.getContentExtractor();
+        EditableMetaData emd = extractor.extract(content);
+        EditableArtifactMetaDataDto metaData;
+        if (emd != null) {
+            metaData = new EditableArtifactMetaDataDto(emd.getName(), emd.getDescription(), emd.getLabels(), emd.getProperties());
+        } else {
+            metaData = new EditableArtifactMetaDataDto();
+        }
+        return metaData;
     }
 
     /**
@@ -379,9 +387,7 @@ public class SqlRegistryStorage extends AbstractRegistryStorage {
         String labelsStr = SqlUtil.serializeLabels(labels);
         String propertiesStr = SqlUtil.serializeProperties(properties);
         
-        ArtifactTypeUtilProvider provider = factory.getArtifactTypeProvider(artifactType);
-        ContentCanonicalizer canonicalizer = provider.getContentCanonicalizer();
-        ContentHandle canonicalContent = canonicalizer.canonicalize(content);
+        ContentHandle canonicalContent = this.canonicalizeContent(artifactType, content);
         byte[] canonicalContentBytes = canonicalContent.bytes();
         String canonicalContentHash = DigestUtils.sha256Hex(canonicalContentBytes);
 
@@ -463,6 +469,13 @@ public class SqlRegistryStorage extends AbstractRegistryStorage {
                       .execute();
             });
         }
+        
+        // Update the "latest" column in the artifacts table with the globalId of the new version
+        sql = sqlStatements.updateArtifactLatestVersion();
+        handle.createUpdate(sql)
+              .bind(0, globalId)
+              .bind(1, artifactId)
+              .execute();
 
         sql = sqlStatements.selectArtifactVersionMetaDataByGlobalId();
         return handle.createQuery(sql)
@@ -598,9 +611,7 @@ public class SqlRegistryStorage extends AbstractRegistryStorage {
         ArtifactMetaDataDto latest = this.getLatestArtifactMetaDataInternal(artifactId);
         
         // Extract meta-data from the new content
-        ArtifactTypeUtilProvider provider = factory.getArtifactTypeProvider(artifactType);
-        ContentExtractor extractor = provider.getContentExtractor();
-        EditableMetaData emd = extractor.extract(content);
+        EditableArtifactMetaDataDto emd = extractMetaData(artifactType, content);
 
         // Create version and return
         return this.jdbi.withHandle(handle -> {
@@ -687,7 +698,7 @@ public class SqlRegistryStorage extends AbstractRegistryStorage {
     @Override @Transactional
     public ArtifactSearchResults searchArtifacts(String search, int offset, int limit, SearchOver searchOver,
             SortOrder sortOrder) {
-        log.debug("Searching for artifacts: {} over {} with {} ordering", search, searchOver, sortOrder);
+        log.info("Searching for artifacts: {} over {} with {} ordering", search, searchOver, sortOrder);
         try {
             return this.jdbi.withHandle( handle -> {
                 List<SqlStatementVariableBinder> binders = new LinkedList<>();
@@ -760,7 +771,8 @@ public class SqlRegistryStorage extends AbstractRegistryStorage {
                 limitOffset.append(" LIMIT ? OFFSET ?");
 
                 // Query for the artifacts
-                Query artifactsQuery = handle.createQuery(select.toString() + where.toString() + orderBy.toString() + limitOffset.toString());
+                String artifactsQuerySql = select.toString() + where.toString() + orderBy.toString() + limitOffset.toString();
+                Query artifactsQuery = handle.createQuery(artifactsQuerySql);
                 // Query for the total row count
                 String countSelect = "SELECT count(a.artifactId) FROM artifacts a JOIN versions v ON a.latest = v.globalId ";
                 Query countQuery = handle.createQuery(countSelect + where.toString());
@@ -819,16 +831,39 @@ public class SqlRegistryStorage extends AbstractRegistryStorage {
             throw new RegistryStorageException(e);
         }
     }
-
+    
     /**
-     * @see io.apicurio.registry.storage.RegistryStorage#getArtifactMetaData(java.lang.String, io.apicurio.registry.content.ContentHandle)
+     * @see io.apicurio.registry.storage.RegistryStorage#getArtifactVersionMetaData(java.lang.String, boolean, io.apicurio.registry.content.ContentHandle)
      */
     @Override @Transactional
-    public ArtifactMetaDataDto getArtifactMetaData(String artifactId, ContentHandle content)
-            throws ArtifactNotFoundException, RegistryStorageException {
-        // Implement this!
-        log.debug("TBD - Please implement me!");
-        return null;
+    public ArtifactVersionMetaDataDto getArtifactVersionMetaData(String artifactId, boolean canonical,
+            ContentHandle content) throws ArtifactNotFoundException, RegistryStorageException {
+        String hash;
+        if (canonical) {
+            ArtifactType type = this.getArtifactMetaData(artifactId).getType();
+            ContentHandle canonicalContent = this.canonicalizeContent(type, content);
+            hash = DigestUtils.sha256Hex(canonicalContent.bytes());
+        } else {
+            hash = DigestUtils.sha256Hex(content.bytes());
+        }
+
+        try {
+            return this.jdbi.withHandle( handle -> {
+                String sql = sqlStatements.selectArtifactMetaDataByContentHash();
+                if (canonical) {
+                    sql = sqlStatements.selectArtifactMetaDataByCanonicalHash();
+                }
+                return handle.createQuery(sql)
+                        .bind(0, artifactId)
+                        .bind(1, hash)
+                        .map(ArtifactVersionMetaDataDtoMapper.instance)
+                        .one();
+            });
+        } catch (IllegalStateException e) {
+            throw new ArtifactNotFoundException(artifactId);
+        } catch (Exception e) {
+            throw new RegistryStorageException(e);
+        }
     }
 
     /**
@@ -860,6 +895,10 @@ public class SqlRegistryStorage extends AbstractRegistryStorage {
     public void updateArtifactMetaData(String artifactId, EditableArtifactMetaDataDto metaData)
             throws ArtifactNotFoundException, RegistryStorageException {
         log.debug("Updating meta-data for an artifact: {}", artifactId);
+
+        ArtifactMetaDataDto dto = this.getLatestArtifactMetaDataInternal(artifactId);
+        long globalId = dto.getGlobalId();
+
         try {
             this.jdbi.withHandle( handle -> {
                 String sql = sqlStatements.updateArtifactMetaDataLatestVersion();
@@ -873,6 +912,44 @@ public class SqlRegistryStorage extends AbstractRegistryStorage {
                 if (rowCount == 0) {
                     throw new ArtifactNotFoundException(artifactId);
                 }
+                
+                // Delete all appropriate rows in the "labels" table
+                sql = sqlStatements.deleteLabelsByGlobalId();
+                handle.createUpdate(sql)
+                    .bind(0, globalId)
+                    .execute();
+                
+                // Delete all appropriate rows in the "properties" table
+                sql = sqlStatements.deletePropertiesByGlobalId();
+                handle.createUpdate(sql)
+                    .bind(0, globalId)
+                    .execute();
+                
+                // Insert new labels into the "labels" table
+                List<String> labels = metaData.getLabels();
+                if (labels != null && !labels.isEmpty()) {
+                    labels.forEach(label -> {
+                        String sqli = sqlStatements.insertLabel();
+                        handle.createUpdate(sqli)
+                              .bind(0, globalId)
+                              .bind(1, label)
+                              .execute();
+                    });
+                }
+
+                // Insert new properties into the "properties" table
+                Map<String, String> properties = metaData.getProperties();
+                if (properties != null && !properties.isEmpty()) {
+                    properties.forEach((k,v) -> {
+                        String sqli = sqlStatements.insertProperty();
+                        handle.createUpdate(sqli)
+                              .bind(0, globalId)
+                              .bind(1, k)
+                              .bind(2, v)
+                              .execute();
+                    });
+                }
+
                 return null;
             });
         } catch (ArtifactNotFoundException e) {
@@ -929,6 +1006,9 @@ public class SqlRegistryStorage extends AbstractRegistryStorage {
             if (sqlStatements.isPrimaryKeyViolation(e)) {
                 throw new RuleAlreadyExistsException(rule);
             }
+            if (sqlStatements.isForeignKeyViolation(e)) {
+                throw new ArtifactNotFoundException(artifactId, e);
+            }
             throw new RegistryStorageException(e);
         }
         return CompletableFuture.completedFuture(null);
@@ -951,7 +1031,7 @@ public class SqlRegistryStorage extends AbstractRegistryStorage {
             });
         } catch (Exception e) {
             throw new RegistryStorageException(e);
-        }        
+        }
     }
 
     /**
@@ -1215,7 +1295,7 @@ public class SqlRegistryStorage extends AbstractRegistryStorage {
             throw e;
         } catch (Exception e) {
             throw new RegistryStorageException(e);
-        }        
+        }
     }
 
     /**
@@ -1225,6 +1305,10 @@ public class SqlRegistryStorage extends AbstractRegistryStorage {
     public ArtifactVersionMetaDataDto getArtifactVersionMetaData(String artifactId, long version)
             throws ArtifactNotFoundException, VersionNotFoundException, RegistryStorageException {
         log.debug("Selecting artifact version meta-data: {} version {}", artifactId, version);
+        return getArtifactVersionMetaDataInternal(artifactId, version);
+    }
+
+    private ArtifactVersionMetaDataDto getArtifactVersionMetaDataInternal(String artifactId, long version) {
         try {
             return this.jdbi.withHandle( handle -> {
                 String sql = sqlStatements.selectArtifactVersionMetaData();
@@ -1249,6 +1333,10 @@ public class SqlRegistryStorage extends AbstractRegistryStorage {
             EditableArtifactMetaDataDto metaData)
             throws ArtifactNotFoundException, VersionNotFoundException, RegistryStorageException {
         log.debug("Updating meta-data for an artifact version: {}", artifactId);
+        
+        ArtifactVersionMetaDataDto dto = this.getArtifactVersionMetaDataInternal(artifactId, version);
+        long globalId = dto.getGlobalId();
+        
         try {
             this.jdbi.withHandle( handle -> {
                 String sql = sqlStatements.updateArtifactVersionMetaData();
@@ -1263,6 +1351,44 @@ public class SqlRegistryStorage extends AbstractRegistryStorage {
                 if (rowCount == 0) {
                     throw new VersionNotFoundException(artifactId, version);
                 }
+
+                // Delete all appropriate rows in the "labels" table
+                sql = sqlStatements.deleteLabelsByGlobalId();
+                handle.createUpdate(sql)
+                    .bind(0, globalId)
+                    .execute();
+                
+                // Delete all appropriate rows in the "properties" table
+                sql = sqlStatements.deletePropertiesByGlobalId();
+                handle.createUpdate(sql)
+                    .bind(0, globalId)
+                    .execute();
+                
+                // Insert new labels into the "labels" table
+                List<String> labels = metaData.getLabels();
+                if (labels != null && !labels.isEmpty()) {
+                    labels.forEach(label -> {
+                        String sqli = sqlStatements.insertLabel();
+                        handle.createUpdate(sqli)
+                              .bind(0, globalId)
+                              .bind(1, label)
+                              .execute();
+                    });
+                }
+
+                // Insert new properties into the "properties" table
+                Map<String, String> properties = metaData.getProperties();
+                if (properties != null && !properties.isEmpty()) {
+                    properties.forEach((k,v) -> {
+                        String sqli = sqlStatements.insertProperty();
+                        handle.createUpdate(sqli)
+                              .bind(0, globalId)
+                              .bind(1, k)
+                              .bind(2, v)
+                              .execute();
+                    });
+                }
+                
                 return null;
             });
         } catch (VersionNotFoundException e) {
@@ -1380,7 +1506,7 @@ public class SqlRegistryStorage extends AbstractRegistryStorage {
             });
         } catch (Exception e) {
             throw new RegistryStorageException(e);
-        }        
+        }
     }
 
     /**
@@ -1480,13 +1606,6 @@ public class SqlRegistryStorage extends AbstractRegistryStorage {
         ArtifactVersionMetaDataDto vmdd = this.createArtifactVersion(handle, artifactType, true, artifactId,
                 metaData.getName(), metaData.getDescription(), metaData.getLabels(), metaData.getProperties(), content);
         
-        // Update the "latest" column in the artifacts table with the globalId of the new version
-        sql = sqlStatements.updateArtifactLatestVersion();
-        handle.createUpdate(sql)
-              .bind(0, vmdd.getGlobalId())
-              .bind(1, artifactId)
-              .execute();
-        
         // Return the new artifact meta-data
         ArtifactMetaDataDto amdd = versionToArtifactDto(artifactId, vmdd);
         amdd.setCreatedBy(createdBy);
@@ -1510,9 +1629,28 @@ public class SqlRegistryStorage extends AbstractRegistryStorage {
         amdd.setState(vmdd.getState());
         amdd.setName(vmdd.getName());
         amdd.setDescription(vmdd.getDescription());
+        amdd.setLabels(vmdd.getLabels());
+        amdd.setProperties(vmdd.getProperties());
         amdd.setType(vmdd.getType());
         amdd.setVersion(vmdd.getVersion());
         return amdd;
+    }
+
+    /**
+     * Canonicalize the given content, returns the content unchanged in the case of an error.
+     * @param artifactType
+     * @param content
+     */
+    private ContentHandle canonicalizeContent(ArtifactType artifactType, ContentHandle content) {
+        try {
+            ArtifactTypeUtilProvider provider = factory.getArtifactTypeProvider(artifactType);
+            ContentCanonicalizer canonicalizer = provider.getContentCanonicalizer();
+            ContentHandle canonicalContent = canonicalizer.canonicalize(content);
+            return canonicalContent;
+        } catch (Exception e) {
+            log.debug("Failed to canonicalize content of type: {}", artifactType.name());
+            return content;
+        }
     }
 
 }

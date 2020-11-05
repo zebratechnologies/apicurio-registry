@@ -2,8 +2,8 @@
     "openapi": "3.0.2",
     "info": {
         "title": "Apicurio Registry API",
-        "version": "1.3.1.Final",
-        "description": "Apicurio Registry is a datastore for standard event schemas and API designs. Apicurio Registry enables developers to manage and share the structure of their data using a REST interface. For example, client applications can dynamically push or pull the latest updates to or from the registry without needing to redeploy. Apicurio Registry also enables developers to create rules that govern how registry content can evolve over time. For example, this includes rules for content validation and version compatibility.\n\nThe Apicurio Registry REST API enables client applications to manage the artifacts in the registry. This API provides create, read, update, and delete operations for schema and API artifacts, rules, versions, and metadata. \n\nThe supported artifact types include:\n- Apache Avro schema\n- AsyncAPI specification\n- Google protocol buffers (schema and file descriptor)\n- GraphQL schema\n- JSON Schema\n- Kafka Connect schema\n- OpenAPI specification\n- Web Services Description Language\n- XML Schema Definition\n\n\n**Note**: The Apicurio Registry REST API is available from `http://MY-REGISTRY-URL/api`. You must prefix all API operation paths with `/api`, for example, `api/ids/{globalId}`.\n",
+        "version": "2.0.0-SNAPSHOT",
+        "description": "Apicurio Registry is a datastore for standard event schemas and API designs. Apicurio Registry enables developers to manage and share the structure of their data using a REST interface. For example, client applications can dynamically push or pull the latest updates to or from the registry without needing to redeploy. Apicurio Registry also enables developers to create rules that govern how registry content can evolve over time. For example, this includes rules for content validation and version compatibility.\n\nThe Apicurio Registry REST API enables client applications to manage the artifacts in the registry. This API provides create, read, update, and delete operations for schema and API artifacts, rules, versions, and metadata. \n\nThe supported artifact types include:\n- Apache Avro schema\n- AsyncAPI specification\n- Google protocol buffers (schema and file descriptor)\n- GraphQL schema\n- JSON Schema\n- Kafka Connect schema\n- OpenAPI specification\n- Web Services Description Language\n- XML Schema Definition\n\n\n**Important**: The Apicurio Registry REST API is available from `http://MY-REGISTRY-URL/api` by default. Therefore you must prefix all API operation paths with `/api` in this case. For example: `api/ids/{globalId}`.\n",
         "contact": {
             "name": "Apicurio",
             "url": "https://github.com/apicurio/apicurio-registry",
@@ -322,7 +322,7 @@
                 },
                 "operationId": "updateArtifactState",
                 "summary": "Update artifact state",
-                "description": "Updates the state of the artifact.  For example, you can use this to mark the latest\nversion of an artifact as `DEPRECATED`.  The operation changes the state of the latest \nversion of the artifact.  If multiple versions exist, only the most recent is changed.\n\nThe following state changes are supported:\n\n* Enabled -> Disabled\n* Enabled -> Deprecated\n* Enabled -> Deleted\n* Disabled -> Enabled\n* Disabled -> Deleted\n* Disabled -> Deprecated\n* Deprecated -> Deleted\n\nThis operation can fail for the following reasons:\n\n* No artifact with this `artifactId` exists (HTTP error `404`)\n* Artifact cannot transition to the given state (HTTP error `400`)\n* A server error occurred (HTTP error `500`)\n"
+                "description": "Updates the state of the artifact.  For example, you can use this to mark the latest\nversion of an artifact as `DEPRECATED`.  The operation changes the state of the latest \nversion of the artifact.  If multiple versions exist, only the most recent is changed.\n\nThis operation can fail for the following reasons:\n\n* No artifact with this `artifactId` exists (HTTP error `404`)\n* A server error occurred (HTTP error `500`)\n"
             },
             "parameters": [
                 {
@@ -443,7 +443,7 @@
                 },
                 "operationId": "updateArtifactVersionState",
                 "summary": "Update artifact version state",
-                "description": "Updates the state of a specific version of an artifact.  For example, you can use \nthis operation to disable a specific version.\n\nThe following state changes are supported:\n\n* Enabled -> Disabled\n* Enabled -> Deprecated\n* Enabled -> Deleted\n* Disabled -> Enabled\n* Disabled -> Deleted\n* Disabled -> Deprecated\n* Deprecated -> Deleted\n\nThis operation can fail for the following reasons:\n\n* No artifact with this `artifactId` exists (HTTP error `404`)\n* No version with this `version` exists (HTTP error `404`)\n* Artifact version cannot transition to the given state (HTTP error `400`)\n* A server error occurred (HTTP error `500`)\n"
+                "description": "Updates the state of a specific version of an artifact.  For example, you can use \nthis operation to disable a specific version.\n\nThis operation can fail for the following reasons:\n\n* No artifact with this `artifactId` exists (HTTP error `404`)\n* No version with this `version` exists (HTTP error `404`)\n* A server error occurred (HTTP error `500`)\n"
             },
             "parameters": [
                 {
@@ -964,6 +964,14 @@
                             "type": "string"
                         },
                         "in": "query"
+                    },
+                    {
+                        "name": "canonical",
+                        "description": "Used only when the `ifExists` query parameter is set to `RETURN_OR_UPDATE`, this parameter can be set to `true` to indicate that the server should \"canonicalize\" the content when searching for a matching version.  The canonicalization algorithm is unique to each artifact type, but typically involves removing extra whitespace and formatting the content in a consistent manner.",
+                        "schema": {
+                            "type": "boolean"
+                        },
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -980,11 +988,11 @@
                     "400": {
                         "$ref": "#/components/responses/BadRequest"
                     },
-                    "409": {
-                        "$ref": "#/components/responses/Conflict"
-                    },
                     "500": {
                         "$ref": "#/components/responses/ServerError"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/RuleViolationConflict"
                     }
                 },
                 "operationId": "createArtifact",
@@ -1320,12 +1328,22 @@
                 "tags": [
                     "Metadata"
                 ],
+                "parameters": [
+                    {
+                        "name": "canonical",
+                        "description": "Parameter that can be set to `true` to indicate that the server should \"canonicalize\" the content when searching for a matching version.  Canonicalization is unique to each artifact type, but typically involves removing any extra whitespace and formatting the content in a consistent manner.",
+                        "schema": {
+                            "type": "boolean"
+                        },
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/ArtifactMetaData"
+                                    "$ref": "#/components/schemas/VersionMetaData"
                                 }
                             }
                         },
@@ -1338,8 +1356,8 @@
                         "$ref": "#/components/responses/ServerError"
                     }
                 },
-                "operationId": "getArtifactMetaDataByContent",
-                "summary": "Get artifact metadata by content",
+                "operationId": "getArtifactVersionMetaDataByContent",
+                "summary": "Get artifact version metadata by content",
                 "description": "Gets the metadata for an artifact that matches the raw content.  Searches the registry\nfor a version of the given artifact matching the content provided in the body of the\nPOST.\n\nThis operation can fail for the following reasons:\n\n* Provided content (request body) was empty (HTTP error `400`)\n* No artifact with the `artifactId` exists (HTTP error `404`)\n* No artifact version matching the provided content exists (HTTP error `404`)\n* A server error occurred (HTTP error `500`)\n"
             },
             "parameters": [
@@ -1500,11 +1518,11 @@
                     "404": {
                         "$ref": "#/components/responses/NotFound"
                     },
-                    "409": {
-                        "$ref": "#/components/responses/Conflict"
-                    },
                     "500": {
                         "$ref": "#/components/responses/ServerError"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/RuleViolationConflict"
                     }
                 },
                 "operationId": "createArtifactVersion",
@@ -1569,11 +1587,11 @@
                     "404": {
                         "$ref": "#/components/responses/NotFound"
                     },
-                    "409": {
-                        "$ref": "#/components/responses/Conflict"
-                    },
                     "500": {
                         "$ref": "#/components/responses/ServerError"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/RuleViolationConflict"
                     }
                 },
                 "operationId": "testUpdateArtifact",
@@ -1979,8 +1997,7 @@
                 "enum": [
                     "ENABLED",
                     "DISABLED",
-                    "DEPRECATED",
-                    "DELETED"
+                    "DEPRECATED"
                 ],
                 "type": "string",
                 "x-codegen-package": "io.apicurio.registry.types"
@@ -2192,6 +2209,62 @@
                 "additionalProperties": {
                     "type": "string"
                 }
+            },
+            "RuleViolationError": {
+                "title": "Root Type for Error",
+                "description": "All error responses, whether `4xx` or `5xx` will include one of these as the response\nbody.",
+                "type": "object",
+                "allOf": [
+                    {
+                        "required": [
+                            "causes"
+                        ],
+                        "type": "object",
+                        "properties": {
+                            "causes": {
+                                "description": "List of rule violation causes.",
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/RuleViolationCause"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "$ref": "#/components/schemas/Error"
+                    }
+                ],
+                "example": {
+                    "error_code": 409,
+                    "message": "Artifact failed validation",
+                    "causes": [
+                        {
+                            "description": "API is missing a title",
+                            "context": "/info[title]"
+                        },
+                        {
+                            "description": "Operation IDs must be unique",
+                            "context": "/paths[/invoices]/put[operationId]"
+                        }
+                    ]
+                }
+            },
+            "RuleViolationCause": {
+                "title": "Root Type for RuleViolationCause",
+                "description": "",
+                "type": "object",
+                "properties": {
+                    "description": {
+                        "type": "string"
+                    },
+                    "context": {
+                        "type": "string"
+                    }
+                },
+                "example": {
+                    "description": "External documentation URL is not valid (it must be formatted as a URL).",
+                    "context": "/info/externalDocs[url]"
+                }
             }
         },
         "responses": {
@@ -2252,6 +2325,34 @@
                                 "value": {
                                     "error_code": 409,
                                     "message": "The artifact content was invalid."
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Common response used when an input conflicts with existing data."
+            },
+            "RuleViolationConflict": {
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/RuleViolationError"
+                        },
+                        "examples": {
+                            "RuleViolationConflictExample": {
+                                "value": {
+                                    "error_code": 409,
+                                    "message": "The artifact content was invalid",
+                                    "causes": [
+                                        {
+                                            "description": "API is missing a title",
+                                            "context": "/info[title]"
+                                        },
+                                        {
+                                            "description": "Operation IDs must be unique",
+                                            "context": "/paths[/invoices]/put[operationId]"
+                                        }
+                                    ]
                                 }
                             }
                         }

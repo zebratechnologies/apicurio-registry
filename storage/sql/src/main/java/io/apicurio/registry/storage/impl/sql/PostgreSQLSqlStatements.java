@@ -47,6 +47,14 @@ public class PostgreSQLSqlStatements extends CommonSqlStatements {
     }
 
     /**
+     * @see io.apicurio.registry.storage.impl.sql.SqlStatements#isForeignKeyViolation(java.lang.Exception)
+     */
+    @Override
+    public boolean isForeignKeyViolation(Exception error) {
+        return error.getMessage().contains("violates foreign key constraint");
+    }
+
+    /**
      * @see io.apicurio.registry.storage.impl.sql.SqlStatements.core.storage.jdbc.ISqlStatements#isDatabaseInitialized()
      */
     @Override
