@@ -106,8 +106,17 @@
         <maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss</maven.build.timestamp.format>
         <timestamp>${maven.build.timestamp}</timestamp>
 
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
+<!--        <maven.compiler.source>1.8</maven.compiler.source>-->
+<!--        <maven.compiler.target>1.8</maven.compiler.target>-->
+
+<!--        <maven.compiler.source>15</maven.compiler.source>-->
+<!--        <maven.compiler.target>15</maven.compiler.target>-->
+
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
+
+<!--        <maven.compiler.source>13</maven.compiler.source>-->
+<!--        <maven.compiler.target>13</maven.compiler.target>-->
 
         <docker.tag.name>latest-release</docker.tag.name>
         <tar.long.file.mode>posix</tar.long.file.mode>
@@ -717,7 +726,9 @@
                         <args>
                             <arg>-deprecation</arg>
                             <arg>-explaintypes</arg>
-                            <arg>-target:jvm-1.8</arg>
+<!--                            <arg>-target:jvm-1.8</arg>-->
+                            <arg>-target:jvm-11</arg>
+<!--                            <arg>-target:jvm-15</arg>-->
                         </args>
                     </configuration>
                     <executions>
@@ -765,8 +776,9 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <source>${maven.compiler.target}</source>
-                    <target>${maven.compiler.target}</target>
+<!--                    <source>${maven.compiler.target}</source>-->
+<!--                    <target>${maven.compiler.target}</target>-->
+                    <release>${maven.compiler.target}</release>
                     <showDeprecation>false</showDeprecation>
                     <showWarnings>false</showWarnings>
                 </configuration>
@@ -933,6 +945,57 @@
             <id>java8</id>
             <activation>
                 <jdk>[1.8,)</jdk>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <configuration>
+                            <additionalJOption>-Xdoclint:none</additionalJOption>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>java11</id>
+            <activation>
+                <jdk>[11,)</jdk>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <configuration>
+                            <additionalJOption>-Xdoclint:none</additionalJOption>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>java13</id>
+            <activation>
+                <jdk>[13,)</jdk>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <configuration>
+                            <additionalJOption>-Xdoclint:none</additionalJOption>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>java15</id>
+            <activation>
+                <jdk>[15,)</jdk>
             </activation>
             <build>
                 <plugins>

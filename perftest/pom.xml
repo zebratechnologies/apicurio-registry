@@ -36,6 +36,7 @@
                             </jvmArgs>
                             <args>
                                 <arg>-target:jvm-1.8</arg>
+<!--                                <arg>-target:jvm-15</arg>-->
                                 <arg>-deprecation</arg>
                                 <arg>-feature</arg>
                                 <arg>-unchecked</arg>
