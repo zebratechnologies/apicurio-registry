@@ -7,7 +7,7 @@ services:
     ports:
       - 8080:8080
     environment:
-      - REGISTRY_DATASOURCE_URL=<replace-with-jdbc-spanner-url>
+      - REGISTRY_DATASOURCE_URL="jdbc:cloudspanner:/projects/es-s2-eval-d/instances/es-s2-eval-d-spanner/databases/apicurio"
       - GOOGLE_APPLICATION_CREDENTIALS=/config/es-s2-eval-d-5429b0b50112.json
     volumes:
-    - /path/to/es-s2-eval-d-5429b0b50112.json:/config/es-s2-eval-d-5429b0b50112.json
+    - /Users/ze6295/Downloads/es-s2-eval-d-5429b0b50112.json:/config/es-s2-eval-d-5429b0b50112.json
