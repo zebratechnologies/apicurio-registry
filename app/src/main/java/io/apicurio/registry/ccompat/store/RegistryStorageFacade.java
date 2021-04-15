@@ -23,8 +23,8 @@ import io.apicurio.registry.ccompat.dto.SubjectVersion;
 import io.apicurio.registry.storage.ArtifactAlreadyExistsException;
 import io.apicurio.registry.storage.ArtifactNotFoundException;
 import io.apicurio.registry.storage.RegistryStorageException;
-import io.apicurio.registry.storage.RuleConfigurationDto;
 import io.apicurio.registry.storage.VersionNotFoundException;
+import io.apicurio.registry.storage.dto.RuleConfigurationDto;
 import io.apicurio.registry.types.RuleType;
 
 import java.util.List;
@@ -35,13 +35,13 @@ import java.util.function.Function;
  *
  *
  * @author Ales Justin
- * @author Jakub Senko <jsenko@redhat.com>
+ * @author Jakub Senko 'jsenko@redhat.com'
  */
 public interface RegistryStorageFacade {
 
     List<String> getSubjects();
 
-    List<SubjectVersion> getSubjectVersions(int globalId);
+    List<SubjectVersion> getSubjectVersions(int contentId);
 
     /**
      * @return List of <b>schema versions</b> in the deleted subject
@@ -84,7 +84,7 @@ public interface RegistryStorageFacade {
     CompatibilityCheckResponse testCompatibilityBySubjectName(String subject, String version,
             SchemaContent request);
 
-    <T> T parseVersionString(String subject, String versionString, Function<Long, T> then);
+    <T> T parseVersionString(String subject, String versionString, Function<String, T> then);
 
     RuleConfigurationDto getGlobalRule(RuleType ruleType);
 

@@ -24,15 +24,28 @@
             <groupId>io.apicurio</groupId>
             <artifactId>apicurio-registry-ui</artifactId>
         </dependency>
-
         <dependency>
             <groupId>io.apicurio</groupId>
-            <artifactId>apicurio-registry-search-client</artifactId>
+            <artifactId>apicurio-registry-utils-kafka</artifactId>
+        </dependency>
+
+         <dependency>
+            <groupId>io.apicurio</groupId>
+            <artifactId>apicurio-registry-schema-compatibility-json</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.apicurio</groupId>
+            <artifactId>apicurio-registry-schema-compatibility-protobuf</artifactId>
         </dependency>
 
         <dependency>
             <groupId>io.apicurio</groupId>
-            <artifactId>apicurio-registry-utils-kafka</artifactId>
+            <artifactId>apicurio-registry-tenant-manager-client</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.apicurio</groupId>
+            <artifactId>apicurio-registry-utils-import-export</artifactId>
         </dependency>
 
         <!-- Quarkus Dependencies -->
@@ -58,15 +71,39 @@
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-smallrye-openapi</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.quarkus</groupId>
             <artifactId>quarkus-vertx</artifactId>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-oidc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-scheduler</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-kotlin</artifactId>
+        </dependency>
+
+        <!-- Persistence -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jdbc-h2</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-agroal</artifactId>
+        </dependency>
+
+        <!-- JDBI -->
+        <dependency>
+            <groupId>org.jdbi</groupId>
+            <artifactId>jdbi3-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
         </dependency>
 
         <!-- Third Party Libraries -->
@@ -81,10 +118,6 @@
         <dependency>
             <groupId>com.networknt</groupId>
             <artifactId>json-schema-validator</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.squareup.wire</groupId>
-            <artifactId>wire-schema</artifactId>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -106,6 +139,10 @@
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-json-org</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
         </dependency>
 
         <!-- Kafka Connect -->
@@ -171,18 +208,38 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-test-common</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>io.rest-assured</groupId>
             <artifactId>rest-assured</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.apicurio</groupId>
-            <artifactId>apicurio-registry-rest-client</artifactId>
+            <artifactId>apicurio-registry-client</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.apicurio</groupId>
-            <artifactId>apicurio-registry-utils-serde</artifactId>
+            <artifactId>apicurio-registry-serdes-avro-serde</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.apicurio</groupId>
+            <artifactId>apicurio-registry-serdes-protobuf-serde</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.apicurio</groupId>
+            <artifactId>apicurio-registry-serdes-jsonschema-serde</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -199,6 +256,11 @@
         <dependency>
             <groupId>com.github.dasniko</groupId>
             <artifactId>testcontainers-keycloak</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-admin-client</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -218,6 +280,10 @@
             <testResource>
                 <directory>src/test/resources</directory>
                 <filtering>true</filtering>
+            </testResource>
+            <testResource>
+                <directory>src/test/resources-unfiltered</directory>
+                <filtering>false</filtering>
             </testResource>
         </testResources>
         <plugins>

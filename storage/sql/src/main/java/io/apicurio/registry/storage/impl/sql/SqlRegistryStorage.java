@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 JBoss Inc
+ * Copyright 2020 Red Hat Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@ import static org.eclipse.microprofile.metrics.MetricUnits.MILLISECONDS;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 
-//import com.google.auth.oauth2.GoogleCredentials;
 import org.eclipse.microprofile.metrics.annotation.ConcurrentGauge;
 import org.eclipse.microprofile.metrics.annotation.Counted;
 import org.eclipse.microprofile.metrics.annotation.Timed;
@@ -39,8 +38,6 @@ import io.apicurio.registry.logging.Logged;
 import io.apicurio.registry.metrics.PersistenceExceptionLivenessApply;
 import io.apicurio.registry.metrics.PersistenceTimeoutReadinessApply;
 import io.apicurio.registry.storage.RegistryStorage;
-
-import java.io.IOException;
 
 /**
  * A SQL implementation of the {@link RegistryStorage} interface.  This impl does not
@@ -59,8 +56,8 @@ public class SqlRegistryStorage extends AbstractSqlRegistryStorage {
     private static final Logger log = LoggerFactory.getLogger(SqlRegistryStorage.class);
 
     @PostConstruct
-    void onConstruct() throws IOException {
-        log.info("Using SQL storage with credentials {}");
+    void onConstruct() {
+        log.info("Using SQL artifactStore.");
     }
 
 }

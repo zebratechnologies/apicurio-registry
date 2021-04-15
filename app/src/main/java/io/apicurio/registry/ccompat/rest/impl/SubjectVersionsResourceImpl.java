@@ -39,7 +39,7 @@ import static org.eclipse.microprofile.metrics.MetricUnits.MILLISECONDS;
 
 /**
  * @author Ales Justin
- * @author Jakub Senko <jsenko@redhat.com>
+ * @author Jakub Senko 'jsenko@redhat.com'
  */
 @Interceptors({ResponseErrorLivenessCheck.class, ResponseTimeoutReadinessCheck.class})
 @RestMetricsApply
@@ -56,11 +56,7 @@ public class SubjectVersionsResourceImpl extends AbstractResource implements Sub
     }
 
     @Override
-    public void register(
-            AsyncResponse response,
-            String subject,
-            SchemaInfo request) throws Exception {
-
+    public void register(String subject, SchemaInfo request, AsyncResponse response) throws Exception {
         facade.createSchema(subject, request.getSchema(), request.getSchemaType())
                 .thenApply(FacadeConverter::convertUnsigned)
                 .whenComplete((id, t) -> {
