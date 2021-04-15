@@ -34,9 +34,9 @@ import io.apicurio.registry.rest.RegistryApplication;
 @Interceptor
 @Logged
 public class LoggingInterceptor {
-    
+
     private static final Map<Class<?>, Logger> loggers = new HashMap<>();
-    
+
     @AroundInvoke
     public Object logMethodEntry(InvocationContext context) throws Exception {
         Logger logger = null;
@@ -46,7 +46,7 @@ public class LoggingInterceptor {
             if (target != null) {
                 targetClass = target.getClass();
             }
-            
+
             logger = getLogger(targetClass);
         } catch (Throwable t) {
         }
@@ -58,14 +58,14 @@ public class LoggingInterceptor {
     }
 
     private void logEnter(InvocationContext context, Logger logger) {
-        if (context != null && context.getMethod() != null && context.getMethod().getName() != null) {
-            logger.debug("ENTERING method [{}] with {} parameters", context.getMethod().getName(), context.getParameters().length);
+        if (context != null && context.getMethod() != null && context.getMethod().getName() != null && context.getParameters() != null && logger != null) {
+            logger.trace("ENTERING method [{}] with {} parameters", context.getMethod().getName(), context.getParameters().length);
         }
     }
 
     private void logLeave(InvocationContext context, Logger logger) {
-        if (context != null && context.getMethod() != null && context.getMethod().getName() != null) {
-            logger.debug("LEAVING method [{}]", context.getMethod().getName());
+        if (context != null && context.getMethod() != null && context.getMethod().getName() != null && context.getParameters() != null && logger != null) {
+            logger.trace("LEAVING method [{}]", context.getMethod().getName());
         }
     }
 

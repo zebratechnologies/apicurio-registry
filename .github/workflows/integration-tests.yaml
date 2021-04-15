@@ -27,27 +27,63 @@ jobs:
         run: echo ${{github.actor}}
       - name: Checkout Code
         uses: actions/checkout@v2
-      - name: Set up JDK 1.8
-        uses: actions/setup-java@v1
+      - name: Set up JDK 11
+        uses: AdoptOpenJDK/install-jdk@v1
         with:
-          java-version: 1.8
+          version: '11'
+          architecture: x64
+
       - name: Cache Dependencies
-        uses: actions/cache@v1
+        uses: actions/cache@v2
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          key: ${{ runner.os }}-integration-tests-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-maven-
+            ${{ runner.os }}-integration-tests-
+
+      # - name: Set test profile to acceptance
+      #   if: github.ref != 'refs/heads/master'
+      #   run: |
+      #     echo "test_profile=acceptance" >> $GITHUB_ENV
+
+      - name: Set test profile to all
+        # if: github.ref == 'refs/heads/master'
+        run: |
+          echo "test_profile=all" >> $GITHUB_ENV
+
+      - name: Get maven wrapper
+        run: mvn -N io.takari:maven:wrapper -Dmaven=3.6.3
+
       - name: Build All Variants
-        run: mvn clean install -Pprod -Psql -Pinfinispan -Pstreams -Pasyncmem -Pkafkasql -DskipTests -pl !tests
-      - name: Run Integration Tests - streams
-        run: mvn verify -Pacceptance -Pstreams -pl tests -Dmaven.javadoc.skip=true --no-transfer-progress
+        run: make SKIP_TESTS=true BUILD_FLAGS='-Dmaven.javadoc.skip=true --no-transfer-progress -Dmaven.wagon.httpconnectionManager.maxTotal=30 -Dmaven.wagon.http.retryHandler.count=5' build-all 
+      
+      - name: Build integration-tests-common
+        run: ./mvnw install -Pintegration-tests -pl integration-tests/integration-tests-common
+
+      - name: Run UI tests - only PRs
+        if: github.ref != 'refs/heads/master'
+        run: ./mvnw verify -Pintegration-tests -Pui -Pinmemory -pl integration-tests/testsuite -Dmaven.javadoc.skip=true --no-transfer-progress -DtrimStackTrace=false
+      
       - name: Run Integration Tests - sql
-        run: mvn verify -Pacceptance -Psql -pl tests -Dmaven.javadoc.skip=true --no-transfer-progress
-      - name: Run Integration Tests - infinispan
-        run: mvn verify -Pacceptance -Pinfinispan -pl tests -Dmaven.javadoc.skip=true --no-transfer-progress
+        run: ./mvnw verify -Pintegration-tests -P${{ env.test_profile }} -Psql -pl integration-tests/testsuite -Dmaven.javadoc.skip=true --no-transfer-progress
+      - name: Run Integration Tests - sql clustered
+        run: ./mvnw verify -Pintegration-tests -Pclustered -Psql -pl integration-tests/testsuite -Dmaven.javadoc.skip=true --no-transfer-progress
       - name: Run Integration Tests - kafkasql
-        run: mvn verify -Pacceptance -Pkafkasql -pl tests -Dmaven.javadoc.skip=true --no-transfer-progress
+        run: ./mvnw verify -Pintegration-tests -P${{ env.test_profile }} -Pkafkasql -pl integration-tests/testsuite -Dmaven.javadoc.skip=true --no-transfer-progress
+      - name: Run Integration Tests - kafkasql clustered
+        run: ./mvnw verify -Pintegration-tests -Pclustered -Pkafkasql -pl integration-tests/testsuite -Dmaven.javadoc.skip=true --no-transfer-progress
+      - name: Run Integration Tests - multitenancy
+        run: ./mvnw verify -Pintegration-tests -Pmultitenancy -Psql -pl integration-tests/testsuite -Dmaven.javadoc.skip=true --no-transfer-progress -DtrimStackTrace=false
+      - name: Run Integration Tests - sql migration
+        run: ./mvnw verify -Pintegration-tests -Pmigration -Psql -pl integration-tests/testsuite -Dmaven.javadoc.skip=true --no-transfer-progress
+      - name: Run Integration Tests - kafkasql migration
+        run: ./mvnw verify -Pintegration-tests -Pmigration -Pkafkasql -pl integration-tests/testsuite -Dmaven.javadoc.skip=true --no-transfer-progress
+
+      - name: Run Legacy Tests - kafkasql
+        run: ./mvnw verify -Pintegration-tests -P${{ env.test_profile }} -Pkafkasql -pl integration-tests/legacy-tests -Dmaven.javadoc.skip=true --no-transfer-progress
+      - name: Run Legacy Tests - sql
+        run: ./mvnw verify -Pintegration-tests -P${{ env.test_profile }} -Psql -pl integration-tests/legacy-tests -Dmaven.javadoc.skip=true --no-transfer-progress
+
       - name: Collect logs
         if: failure()
         run: ./.github/scripts/collect_logs.sh
@@ -57,4 +93,3 @@ jobs:
         with:
           name: tests-logs
           path: artifacts
-          
