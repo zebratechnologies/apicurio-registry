@@ -1,0 +1,58 @@
+# Default values for schema-registry.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+# Name of secret containing spanner password
+spannerSecretName: spanner-service
+
+image:
+  repository: us.gcr.io/es-s2-eval-d/2249dae260555ea5c070e606369fb7ca5f84106cc6cdb4b81cba78ce36265fb3
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tagSeparator: "@sha256:"
+  tag: 2249dae260555ea5c070e606369fb7ca5f84106cc6cdb4b81cba78ce36265fb3
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+# Load Balancer port
+service:
+  port: 8080
+
+resources:
+  limits:
+    cpu: "1"
+    memory: "4Gi"
+  requests:
+    cpu: "0.1"
+    memory: "2Gi"
+
+# Helm default template creates this.  Left it in but disabled for now.
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
