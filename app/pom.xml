@@ -14,16 +14,6 @@
     <packaging>jar</packaging>
     <name>apicurio-registry-app</name>
 
-
-    <mirror>
-        <id>maven-default-http-blocker</id>
-        <mirrorOf>external:http:*</mirrorOf>
-        <name>Pseudo repository to mirror external repositories initially using HTTP.</name>
-        <url>http://0.0.0.0/</url>
-        <blocked>false</blocked>
-    </mirror>
-
-
     <dependencies>
         <!-- Projects -->
         <dependency>
