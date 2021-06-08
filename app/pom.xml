@@ -14,6 +14,16 @@
     <packaging>jar</packaging>
     <name>apicurio-registry-app</name>
 
+
+    <mirror>
+        <id>maven-default-http-blocker</id>
+        <mirrorOf>external:http:*</mirrorOf>
+        <name>Pseudo repository to mirror external repositories initially using HTTP.</name>
+        <url>http://0.0.0.0/</url>
+        <blocked>false</blocked>
+    </mirror>
+
+
     <dependencies>
         <!-- Projects -->
         <dependency>
@@ -123,6 +133,10 @@
 		    <groupId>uk.gov.nationalarchives</groupId>
 		    <artifactId>csv-validator-java-api</artifactId>
 		</dependency>
+        <dependency>
+            <groupId>com.gilt</groupId>
+            <artifactId>gfc-semver_2.11</artifactId>
+        </dependency>
 		<dependency>
 		    <groupId>uk.gov.nationalarchives</groupId>
 		    <artifactId>csv-validator-parent</artifactId>
