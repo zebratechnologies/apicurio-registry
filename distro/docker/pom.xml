@@ -215,7 +215,8 @@
                                 <configuration>
                                     <images>
                                         <image>
-                                            <name>apicurio/apicurio-registry-sql:${project.version}</name>
+<!--                                            TODO : UN HARDCODE THIS-->
+                                            <name>gcr.io/es-s2-eval-d/apicurio-registry-sql:${project.version}</name>
                                             <build>
                                                 <contextDir>${project.build.directory}/docker</contextDir>
                                                 <dockerFile>./Dockerfile.sql.jvm</dockerFile>
