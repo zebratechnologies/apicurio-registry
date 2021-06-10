@@ -215,7 +215,7 @@
                                 <configuration>
                                     <images>
                                         <image>
-                                            <name>gcr.io/ss-pp-core-d/apicurio-registry-sql:${project.version}</name>
+                                            <name>ss-pp-core-d/apicurio-registry-sql:${project.version}</name>
                                             <build>
                                                 <contextDir>${project.build.directory}/docker</contextDir>
                                                 <dockerFile>./Dockerfile.sql.jvm</dockerFile>
