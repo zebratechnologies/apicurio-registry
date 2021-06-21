@@ -1,8 +1,6 @@
 FROM fabric8/java-alpine-openjdk11-jre
 
-#TODO: un-hardcode - Z Evans 6/9/2021
 ENV APP_URL="${docker.sql.file}"
-#ENV APP_URL="app-files/apicurio-registry-storage-sql-2.0.0-SNAPSHOT-all.tar.gz"
 ENV JAVA_OPTIONS="-Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager"
 ENV AB_ENABLED=jmx_exporter
 
